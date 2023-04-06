@@ -176,6 +176,7 @@ class SlackConnector(
         }
     }
 
+
     private fun postMessage(message: SlackConnectorMessage, delayInMs: Long) {
         executor.executeBlocking(Duration.ofMillis(delayInMs)) {
             client.postMessage(authorization, message)
