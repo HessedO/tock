@@ -24,6 +24,7 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody
 import retrofit2.Call
 import retrofit2.http.Body
+import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
 
@@ -35,18 +36,36 @@ object SlackClient {
         @POST("/services/{outToken1}/{outToken2}/{outToken3}")
         fun sendMessage(@Path("outToken1") outToken1: String, @Path("outToken2") outToken2: String, @Path("outToken3") outToken3: String, @Body message: RequestBody): Call<Void>
     }
+    interface CustomSlackApi {
+        @POST("/chat.postMessage")
+        fun postMessage(@Header("Authorization") authorization: String, @Body message: RequestBody): Call<Void>
+    }
 
     private val slackApi: SlackApi = retrofitBuilderWithTimeoutAndLogger(
-        30000,
-        logger
+            30000,
+            logger
     )
-        .baseUrl("https://hooks.slack.com")
-        .build()
-        .create(SlackApi::class.java)
+            .baseUrl("https://hooks.slack.com")
+            .build()
+            .create(SlackApi::class.java)
+
+    private val customSlackApi: CustomSlackApi = retrofitBuilderWithTimeoutAndLogger(
+            30000,
+            logger
+    )
+            .baseUrl("https://slack.com/api")
+            .build()
+            .create(CustomSlackApi::class.java)
 
     fun sendMessage(outToken1: String, outToken2: String, outToken3: String, message: SlackConnectorMessage) {
         val body = RequestBody.create("application/json".toMediaType(), mapper.writeValueAsBytes(message))
         val response = slackApi.sendMessage(outToken1, outToken2, outToken3, body).execute()
+        logger.debug { response }
+    }
+
+    fun postMessage(authorization: String, message: SlackConnectorMessage) {
+        val body = RequestBody.create("application/json".toMediaType(), mapper.writeValueAsBytes(message))
+        val response = customSlackApi.postMessage(authorization, body).execute()
         logger.debug { response }
     }
 }

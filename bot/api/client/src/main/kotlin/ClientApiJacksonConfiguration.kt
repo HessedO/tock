@@ -39,7 +39,6 @@ private object I18nTextSerializer : JsonSerializer<I18nText>() {
         if (value.key != null) {
             gen.writeStringField(I18nText::key.name, value.key)
         }
-
         gen.writeEndObject()
     }
 }
