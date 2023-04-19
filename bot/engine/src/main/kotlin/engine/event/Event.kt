@@ -30,7 +30,7 @@ abstract class Event(
     /**
      * The bot application id.
      */
-    val applicationId: String,
+    var applicationId: String,
     /**
      * The unique id of the event.
      */

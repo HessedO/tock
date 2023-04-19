@@ -21,10 +21,7 @@ import ai.tock.bot.connector.ConnectorCallback
 import ai.tock.bot.connector.ConnectorMessage
 import ai.tock.bot.connector.media.MediaCard
 import ai.tock.bot.connector.media.MediaMessage
-import ai.tock.bot.connector.slack.model.EventApiMessage
-import ai.tock.bot.connector.slack.model.SlackConnectorMessage
-import ai.tock.bot.connector.slack.model.SlackMessageOut
-import ai.tock.bot.connector.slack.model.UrlVerificationEvent
+import ai.tock.bot.connector.slack.model.*
 import ai.tock.bot.connector.slack.model.old.SlackMessageIn
 import ai.tock.bot.engine.BotBus
 import ai.tock.bot.engine.BotRepository.requestTimer
@@ -50,7 +47,7 @@ class SlackConnector(
         val outToken1: String,
         val outToken2: String,
         val outToken3: String,
-        val authorization: String,
+        //val authorization: String,
         val client: SlackClient
 ) : ConnectorBase(SlackConnectorProvider.connectorType) {
 
@@ -99,6 +96,8 @@ class SlackConnector(
                                 controller.handle(event)
                             }
                         } else {
+
+                            logger.info { "fiiiiiiiiiiiiiiiiiiiiiiiiiiiin" }
                             logger.debug { "skip message: $body" }
                         }
                     }
@@ -163,15 +162,23 @@ class SlackConnector(
     override fun send(event: Event, callback: ConnectorCallback, delayInMs: Long) {
         logger.debug { "event: $event" }
         if (event is Action) {
-            val message = SlackMessageConverter.toMessageOut(event)
+            var tmp = event.applicationId
+            event.applicationId = tmp.split("|",limit = 2).first()
+            var message = SlackMessageConverter.toMessageOut(event)
+            message = message as SlackMessageOut
+            message.channel = tmp.split("|",limit = 2).last()
             if (message != null) {
-                sendMessage(message, delayInMs)
+                //sendMessage(message, delayInMs)
+                postMessage(message,delayInMs)
             }
         }
     }
 
     private fun sendMessage(message: SlackConnectorMessage, delayInMs: Long) {
         executor.executeBlocking(Duration.ofMillis(delayInMs)) {
+            val test1  = message as SlackMessageOut
+            logger.info { "channel: ${test1.channel}"}
+            logger.info { "msg: ${test1.text}"}
             client.sendMessage(outToken1, outToken2, outToken3, message)
         }
     }
@@ -179,7 +186,10 @@ class SlackConnector(
 
     private fun postMessage(message: SlackConnectorMessage, delayInMs: Long) {
         executor.executeBlocking(Duration.ofMillis(delayInMs)) {
-            client.postMessage(authorization, message)
+            val test1  = message as SlackMessageOut
+            logger.info { "channel: ${test1.channel}"}
+            logger.info { "channel: ${test1.text}"}
+            client.postMessage("Bearer xoxb-4797347338596-5098004254820-k16ey66Rii2odMECwqshupOo", message)
         }
     }
 
