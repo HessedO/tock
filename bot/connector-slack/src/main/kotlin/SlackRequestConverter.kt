@@ -33,6 +33,7 @@ internal object SlackRequestConverter {
 
     fun toEvent(event: EventApiMessage, applicationId: String): Event? =
         if (event is InteractiveMessageEvent) {
+            logger.info { "event is InteractiveMessageEvent"}
             val params = SendChoice.decodeChoiceId(event.actions.first().value)
             SendChoice(
                 PlayerId(event.user.id),
@@ -44,12 +45,18 @@ internal object SlackRequestConverter {
         } else if (event is CallbackEvent) {
             event.event.let { message ->
                 if (message.user == null) null
-                else SendSentence(
-                    PlayerId(message.user),
-                    applicationId,
-                    PlayerId(applicationId, bot),
-                    message.text
-                )
+                else{
+                    logger.info { "channel yeah : ${message.channel}"}
+                    logger.info { "channel yeah : ${message.text}"}
+
+                    SendSentence(
+                            PlayerId(message.user),
+                            "$applicationId|${message.channel}",
+                            PlayerId(applicationId, bot),
+                            message.text
+                    )
+                }
+
             }
         } else {
             logger.warn { "unhandled event: $event" }
