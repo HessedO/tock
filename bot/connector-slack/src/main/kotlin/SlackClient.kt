@@ -16,10 +16,12 @@
 
 package ai.tock.bot.connector.slack
 
+import SlackProperties
 import ai.tock.bot.connector.slack.model.SlackConnectorMessage
 import ai.tock.bot.connector.slack.model.SlackMessageOut
 import ai.tock.shared.jackson.mapper
 import ai.tock.shared.retrofitBuilderWithTimeoutAndLogger
+import ai.tock.shared.tokenAuthenticationInterceptor
 import mu.KotlinLogging
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody
@@ -37,26 +39,51 @@ object SlackClient {
         @POST("/services/{outToken1}/{outToken2}/{outToken3}")
         fun sendMessage(@Path("outToken1") outToken1: String, @Path("outToken2") outToken2: String, @Path("outToken3") outToken3: String, @Body message: RequestBody): Call<Void>
     }
+
     interface CustomSlackApi {
         @POST("/api/chat.postMessage")
         fun postMessage(@Header("Authorization") authorization: String, @Body message: RequestBody): Call<Void>
     }
 
     private val slackApi: SlackApi = retrofitBuilderWithTimeoutAndLogger(
-            30000,
-            logger
+        30000,
+        logger
     )
-            .baseUrl("https://hooks.slack.com")
-            .build()
-            .create(SlackApi::class.java)
+        .baseUrl(SlackProperties.hooksBaseUrl)
+        .build()
+        .create(SlackApi::class.java)
 
     private val customSlackApi: CustomSlackApi = retrofitBuilderWithTimeoutAndLogger(
-            30000,
-            logger
+        30000,
+        logger,
+        interceptors = listOf(
+
+            tokenAuthenticationInterceptor(retrieveTokenOauth())
+        ),
     )
-            .baseUrl("https://slack.com")
-            .build()
-            .create(CustomSlackApi::class.java)
+        .baseUrl(SlackProperties.apiBaseUrl)
+        .build()
+        .create(CustomSlackApi::class.java)
+
+    /**
+     * Retrieve token Oauth
+     */
+    private fun retrieveTokenOauth(): String {
+        // take a not null token between the two defined here
+        return listOfNotNull(
+            try {
+                // TODO : finish token retrieve
+//                if (clientId != null) {
+//                    SlackOauthClient.slackOauth.authorize("chat:write", clientId).execute()
+//                        .body()?.accessToken
+//                } else null
+                SlackProperties.oauthToken
+            } catch (e: Exception) {
+                throw Throwable("trouble retrieving slack token : ${e.message}")
+            }
+        ).first()
+
+    }
 
     fun sendMessage(outToken1: String, outToken2: String, outToken3: String, message: SlackConnectorMessage) {
         val body = RequestBody.create("application/json".toMediaType(), mapper.writeValueAsBytes(message))
