@@ -47,7 +47,7 @@ class SlackConnector(
         val outToken1: String,
         val outToken2: String,
         val outToken3: String,
-        //val authorization: String,
+        val authorization: String,
         val client: SlackClient
 ) : ConnectorBase(SlackConnectorProvider.connectorType) {
 
@@ -57,6 +57,7 @@ class SlackConnector(
     }
 
     private val executor: Executor by injector.instance()
+
 
     override fun register(controller: ConnectorController) {
         if (OLD_SLACK_API) {
@@ -79,28 +80,29 @@ class SlackConnector(
                         }
                     }
                     logger.info { "message received from slack: $body" }
-                    logger.info { "Okliiiiiiiiiiiiiiiiiiiiiiiiiiiiin" }
 
-                    val message: EventApiMessage = mapper.readValue(body)
-                    if (message is UrlVerificationEvent) {
-                        context
-                                .response()
-                                .putHeader("Content-type", "text/plain")
-                                .end(message.challenge)
-                    } else {
-                        // answer to slack immediately
-                        context.response().end()
-                        val event = SlackRequestConverter.toEvent(message, applicationId)
-                        if (event != null) {
-                            executor.executeBlocking {
-                                controller.handle(event)
-                            }
+                    if(!body.contains("bot_id")){
+                        val message: EventApiMessage = mapper.readValue(body)
+                        if (message is UrlVerificationEvent) {
+                            context
+                                    .response()
+                                    .putHeader("Content-type", "text/plain")
+                                    .end(message.challenge)
                         } else {
-
-                            logger.info { "fiiiiiiiiiiiiiiiiiiiiiiiiiiiin" }
-                            logger.debug { "skip message: $body" }
+                            // answer to slack immediately
+                            context.response().end()
+                            val event = SlackRequestConverter.toEvent(message, applicationId)
+                            if (event != null) {
+                                executor.executeBlocking {
+                                    controller.handle(event)
+                                }
+                            } else {
+                                logger.debug { "skip message: $body" }
+                            }
                         }
                     }
+
+
                 } catch (e: Throwable) {
                     logger.logError(e, requestTimerData)
                     try {
@@ -162,7 +164,7 @@ class SlackConnector(
     override fun send(event: Event, callback: ConnectorCallback, delayInMs: Long) {
         logger.debug { "event: $event" }
         if (event is Action) {
-            var tmp = event.applicationId
+            val tmp = event.applicationId
             event.applicationId = tmp.split("|",limit = 2).first()
             var message = SlackMessageConverter.toMessageOut(event)
             message = message as SlackMessageOut
@@ -176,9 +178,6 @@ class SlackConnector(
 
     private fun sendMessage(message: SlackConnectorMessage, delayInMs: Long) {
         executor.executeBlocking(Duration.ofMillis(delayInMs)) {
-            val test1  = message as SlackMessageOut
-            logger.info { "channel: ${test1.channel}"}
-            logger.info { "msg: ${test1.text}"}
             client.sendMessage(outToken1, outToken2, outToken3, message)
         }
     }
@@ -186,10 +185,7 @@ class SlackConnector(
 
     private fun postMessage(message: SlackConnectorMessage, delayInMs: Long) {
         executor.executeBlocking(Duration.ofMillis(delayInMs)) {
-            val test1  = message as SlackMessageOut
-            logger.info { "channel: ${test1.channel}"}
-            logger.info { "channel: ${test1.text}"}
-            client.postMessage("Bearer xoxb-4797347338596-5098004254820-k16ey66Rii2odMECwqshupOo", message)
+            client.postMessage("Bearer $authorization", message)
         }
     }
 

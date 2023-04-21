@@ -17,17 +17,13 @@
 package ai.tock.bot.connector.slack
 
 import ai.tock.bot.connector.slack.model.SlackConnectorMessage
-import ai.tock.bot.connector.slack.model.SlackMessageOut
 import ai.tock.shared.jackson.mapper
 import ai.tock.shared.retrofitBuilderWithTimeoutAndLogger
 import mu.KotlinLogging
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody
 import retrofit2.Call
-import retrofit2.http.Body
-import retrofit2.http.Header
-import retrofit2.http.POST
-import retrofit2.http.Path
+import retrofit2.http.*
 
 object SlackClient {
 
@@ -65,17 +61,9 @@ object SlackClient {
     }
 
     fun postMessage(authorization: String, message: SlackConnectorMessage) {
-        val test2  = message as SlackMessageOut
-        val messageJson = """
-            {
-            "channel":"${test2.channel}",
-            "text":"${test2.text}"
-            }  
-        """.trimIndent()
-        val body = RequestBody.create("application/json".toMediaType(), messageJson)
+        val body = RequestBody.create("application/json".toMediaType(), mapper.writeValueAsBytes(message))
         val response = customSlackApi.postMessage(authorization, body).execute()
         logger.debug { response }
-        logger.info{"text2 : ${test2.text}"}
-        logger.info{"channel2 : ${test2.channel}"}
     }
+
 }

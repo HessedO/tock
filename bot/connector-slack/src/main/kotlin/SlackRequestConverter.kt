@@ -33,7 +33,6 @@ internal object SlackRequestConverter {
 
     fun toEvent(event: EventApiMessage, applicationId: String): Event? =
         if (event is InteractiveMessageEvent) {
-            logger.info { "event is InteractiveMessageEvent"}
             val params = SendChoice.decodeChoiceId(event.actions.first().value)
             SendChoice(
                 PlayerId(event.user.id),
@@ -46,9 +45,6 @@ internal object SlackRequestConverter {
             event.event.let { message ->
                 if (message.user == null) null
                 else{
-                    logger.info { "channel yeah : ${message.channel}"}
-                    logger.info { "channel yeah : ${message.text}"}
-
                     SendSentence(
                             PlayerId(message.user),
                             "$applicationId|${message.channel}",
