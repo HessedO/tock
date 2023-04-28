@@ -19,9 +19,9 @@ package ai.tock.bot.connector.slack.model
 import ai.tock.bot.engine.message.GenericMessage
 
 data class SlackMessageOut(
-        val text: String,
-        var channel: String? = null,
-        val attachments: List<SlackMessageAttachment> = emptyList()
+    val text: String,
+    val channel: String? = null,
+    val attachments: List<SlackMessageAttachment> = emptyList()
 ) : SlackConnectorMessage() {
 
     override fun toGenericMessage(): GenericMessage? =
