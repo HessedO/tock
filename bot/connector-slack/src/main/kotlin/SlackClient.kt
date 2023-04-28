@@ -18,7 +18,6 @@ package ai.tock.bot.connector.slack
 
 import SlackProperties
 import ai.tock.bot.connector.slack.model.SlackConnectorMessage
-import ai.tock.bot.connector.slack.model.SlackMessageOut
 import ai.tock.shared.jackson.mapper
 import ai.tock.shared.retrofitBuilderWithTimeoutAndLogger
 import ai.tock.shared.tokenAuthenticationInterceptor
@@ -37,7 +36,12 @@ object SlackClient {
 
     interface SlackApi {
         @POST("/services/{outToken1}/{outToken2}/{outToken3}")
-        fun sendMessage(@Path("outToken1") outToken1: String, @Path("outToken2") outToken2: String, @Path("outToken3") outToken3: String, @Body message: RequestBody): Call<Void>
+        fun sendMessage(
+            @Path("outToken1") outToken1: String,
+            @Path("outToken2") outToken2: String,
+            @Path("outToken3") outToken3: String,
+            @Body message: RequestBody
+        ): Call<Void>
     }
 
     interface CustomSlackApi {
@@ -57,7 +61,6 @@ object SlackClient {
         30000,
         logger,
         interceptors = listOf(
-
             tokenAuthenticationInterceptor(retrieveTokenOauth())
         ),
     )
@@ -85,24 +88,23 @@ object SlackClient {
 
     }
 
+    /**
+     * Use webhooks slack message : https://api.slack.com/messaging/webhooks
+     */
     fun sendMessage(outToken1: String, outToken2: String, outToken3: String, message: SlackConnectorMessage) {
         val body = RequestBody.create("application/json".toMediaType(), mapper.writeValueAsBytes(message))
         val response = slackApi.sendMessage(outToken1, outToken2, outToken3, body).execute()
-        logger.debug{response}
+        logger.debug { response }
     }
 
+    /**
+     * Use https://api.slack.com/methods/chat.postMessage
+     */
     fun postMessage(authorization: String, message: SlackConnectorMessage) {
-        val test2  = message as SlackMessageOut
-        val messageJson = """
-            {
-            "channel":"${test2.channel}",
-            "text":"${test2.text}"
-            }  
-        """.trimIndent()
-        val body = RequestBody.create("application/json".toMediaType(), messageJson)
+        val body =
+            RequestBody.create("application/json; charset=utf-8".toMediaType(), mapper.writeValueAsBytes(message))
         val response = customSlackApi.postMessage(authorization, body).execute()
         logger.debug { response }
-        logger.info{"text2 : ${test2.text}"}
-        logger.info{"channel2 : ${test2.channel}"}
     }
+
 }
