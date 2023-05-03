@@ -44,12 +44,15 @@ internal object SlackRequestConverter {
         } else if (event is CallbackEvent) {
             event.event.let { message ->
                 if (message.user == null) null
-                else SendSentence(
-                    PlayerId(message.user),
-                    applicationId,
-                    PlayerId(applicationId, bot),
-                    message.text
-                )
+                else {
+                    SendSentence(
+                        PlayerId(message.user),
+                        applicationId,
+                        PlayerId(applicationId, bot),
+                        message.text,
+                    )
+                }
+
             }
         } else {
             logger.warn { "unhandled event: $event" }
