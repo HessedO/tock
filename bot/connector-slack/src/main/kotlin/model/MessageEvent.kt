@@ -21,6 +21,8 @@ package ai.tock.bot.connector.slack.model
  */
 data class MessageEvent(
     val channel: String,
+    val type: String,
+    val subtype: String,
     val user: String?,
     val text: String,
     val ts: String

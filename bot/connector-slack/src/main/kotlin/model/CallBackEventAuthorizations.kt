@@ -14,20 +14,20 @@
  * limitations under the License.
  */
 
-package ai.tock.bot.connector.slack.model
+package model
 
 import com.fasterxml.jackson.annotation.JsonProperty
-import model.CallBackEventAuthorizations
 
-/**
- * An event callback.
- */
-data class CallbackEvent(
-    val token: String,
+data class CallBackEventAuthorizations(
+    @JsonProperty("enterprise_id")
+    val enterpriseId: String,
     @JsonProperty("team_id")
     val teamId: String,
-    @JsonProperty("api_app_id")
-    val apiAppId: String,
-    val event: MessageEvent,
-    val authorizations : List<CallBackEventAuthorizations>
-) : EventApiMessage()
+    @JsonProperty("user_id")
+    val userId: String,
+    @JsonProperty("is_bot")
+    val isBot : Boolean,
+    @JsonProperty("is_enterprise_install")
+    val isEnterpriseInstall : Boolean
+
+)
