@@ -16,11 +16,14 @@
 
 package model
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.annotation.JsonProperty
 
 data class CallBackEventAuthorizations(
     @JsonProperty("enterprise_id")
-    val enterpriseId: String,
+    val enterpriseId: String?,
     @JsonProperty("team_id")
     val teamId: String,
     @JsonProperty("user_id")

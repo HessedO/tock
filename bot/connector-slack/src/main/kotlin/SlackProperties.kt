@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
+package ai.tock.bot.connector.slack
+
 import ai.tock.shared.booleanProperty
 import ai.tock.shared.property
 import ai.tock.shared.propertyOrNull
 
 object SlackProperties {
-    val apiBaseUrl = property("tock_slack_api_base_url","https://slack.com")
-    val hooksBaseUrl = property("tock_slack_hooks_base_url","https://hooks.slack.com")
+    val apiBaseUrl = property("tock_slack_api_base_url", "https://slack.com")
+    val hooksBaseUrl = property("tock_slack_hooks_base_url", "https://hooks.slack.com")
     val oauthToken = propertyOrNull("tock_slack_oauth_token")
     val clientId = propertyOrNull("tock_slack_client_id")
-    val useCurrentSlackApi = booleanProperty("tock_slack_use_current_slack_api",false)
+    val useCurrentSlackApi = booleanProperty("tock_slack_use_current_slack_api", false)
 }

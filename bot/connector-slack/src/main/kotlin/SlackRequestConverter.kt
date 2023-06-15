@@ -16,20 +16,25 @@
 
 package ai.tock.bot.connector.slack
 
+import ai.tock.bot.connector.slack.model.AppHomeOpenedEvent
 import ai.tock.bot.connector.slack.model.CallbackEvent
 import ai.tock.bot.connector.slack.model.EventApiMessage
 import ai.tock.bot.connector.slack.model.InteractiveMessageEvent
+import ai.tock.bot.connector.slack.model.MessageEvent
 import ai.tock.bot.connector.slack.model.old.SlackMessageIn
 import ai.tock.bot.engine.action.SendChoice
 import ai.tock.bot.engine.action.SendSentence
 import ai.tock.bot.engine.event.Event
+import ai.tock.bot.engine.event.StartConversationEvent
 import ai.tock.bot.engine.user.PlayerId
 import ai.tock.bot.engine.user.PlayerType.bot
+import ai.tock.bot.engine.user.PlayerType.user
 import mu.KotlinLogging
 
 internal object SlackRequestConverter {
 
     private val logger = KotlinLogging.logger {}
+//    alias skipEvent : Event? = null
 
     fun toEvent(event: EventApiMessage, applicationId: String): Event? =
         if (event is InteractiveMessageEvent) {
@@ -42,15 +47,24 @@ internal object SlackRequestConverter {
                 params.second
             )
         } else if (event is CallbackEvent) {
-            event.event.let { message ->
-                if (message.user == null) null
+            event.event.let { subMessage ->
+                if (subMessage.user == null) null
+                else if(subMessage is AppHomeOpenedEvent){
+                    logger.debug { "app opened" }
+                    null
+//                    StartConversationEvent(PlayerId(subMessage.user,user,subMessage.channel))
+                }
                 else {
-                    SendSentence(
-                        PlayerId(message.user),
-                        applicationId,
-                        PlayerId(applicationId, bot),
-                        message.text,
-                    )
+                    if(subMessage is MessageEvent) {
+                        SendSentence(
+                            PlayerId(subMessage.user),
+                            applicationId,
+                            PlayerId(applicationId, bot),
+                            subMessage.text,
+                        )
+                    } else {
+                        null
+                    }
                 }
 
             }

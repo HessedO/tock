@@ -16,18 +16,24 @@
 
 package ai.tock.bot.connector.slack.model
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.fasterxml.jackson.annotation.JsonInclude
+import com.fasterxml.jackson.annotation.JsonInclude.Include
 import com.fasterxml.jackson.annotation.JsonProperty
 import model.CallBackEventAuthorizations
 
 /**
  * An event callback.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonInclude(Include.NON_NULL)
 data class CallbackEvent(
     val token: String,
     @JsonProperty("team_id")
     val teamId: String,
     @JsonProperty("api_app_id")
     val apiAppId: String,
-    val event: MessageEvent,
+    @JsonProperty("event")
+    val event: EventSubTypeApiMessage,
     val authorizations : List<CallBackEventAuthorizations>
 ) : EventApiMessage()

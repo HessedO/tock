@@ -84,180 +84,178 @@ class SlackConnector(
                     }
                     logger.info { "message received from slack: $body" }
 
-                    // TODO : manage with connectorCallback
-                    if (!body.contains("bot_id")) {
-                        val message: EventApiMessage = mapper.readValue(body)
-                        if (message is UrlVerificationEvent) {
-                            context
-                                .response()
-                                .putHeader("Content-type", "text/plain")
-                                .end(message.challenge)
-                        } else {
-                            // answer to slack immediately
-                            context.response().end()
-                            val event = SlackRequestConverter.toEvent(message, applicationId)
-                            if (event != null) {
-                                executor.executeBlocking {
-                                    controller.handle(
-                                        event, if (message is CallbackEvent) {
-                                            ConnectorData(SlackConnectorCallback(applicationId, message.event.channel))
-                                        } else {
-                                            ConnectorData(
-                                                ConnectorCallbackBase(
-                                                    event.applicationId,
-                                                    slackConnectorType
-                                                )
+                    val message: EventApiMessage = mapper.readValue(body)
+                    if (message is UrlVerificationEvent) {
+                        context
+                            .response()
+                            .putHeader("Content-type", "text/plain")
+                            .end(message.challenge)
+                    } else {
+                        // answer to slack immediately
+                        context.response().end()
+                        val event = SlackRequestConverter.toEvent(message, applicationId)
+                        if (event != null) {
+                            executor.executeBlocking {
+                                controller.handle(
+                                    event, if (message is CallbackEvent) {
+                                        ConnectorData(SlackConnectorCallback(applicationId, message.event.channel))
+                                    } else {
+                                        ConnectorData(
+                                            ConnectorCallbackBase(
+                                                event.applicationId,
+                                                slackConnectorType
                                             )
-                                        }
-                                    )
-                                }
-                            } else {
-                                logger.debug { "skip message: $body" }
+                                        )
+                                    }
+                                )
                             }
+                        } else {
+                            logger.debug { "skip message: $body" }
                         }
                     }
 
-
-                } catch (e: Throwable) {
-                    logger.logError(e, requestTimerData)
-                    try {
-                        context.response().end()
-                    } catch (e: Exception) {
-                        logger.error(e)
-                    }
-                } finally {
-                    try {
-                        requestTimer.end(requestTimerData)
-                    } catch (e: Throwable) {
-                        logger.error(e)
-                    }
-                }
+            } catch (e: Throwable) {
+            logger.logError(e, requestTimerData)
+            try {
+                context.response().end()
+            } catch (e: Exception) {
+                logger.error(e)
+            }
+        } finally {
+            try {
+                requestTimer.end(requestTimerData)
+            } catch (e: Throwable) {
+                logger.error(e)
             }
         }
+        }
     }
+}
 
-    private fun oldApi(controller: ConnectorController) {
-        controller.registerServices(path) { router ->
-            router.post(path).handler { context ->
-                val requestTimerData = requestTimer.start("slack_webhook")
-                try {
-                    val body = context.convertUrlEncodedStringToJson()
-                    logger.info { "message received from slack: $body" }
+private fun oldApi(controller: ConnectorController) {
+    controller.registerServices(path) { router ->
+        router.post(path).handler { context ->
+            val requestTimerData = requestTimer.start("slack_webhook")
+            try {
+                val body = context.convertUrlEncodedStringToJson()
+                logger.info { "message received from slack: $body" }
 
-                    val message = mapper.readValue<SlackMessageIn>(body, SlackMessageIn::class.java)
-                    if (message.user_id != "USLACKBOT") {
-                        vertx.executeBlocking<Void>(
-                            {
-                                try {
-                                    val event = SlackRequestConverter.toEvent(message, applicationId)
-                                    if (event != null) {
-                                        controller.handle(event)
-                                    } else {
-                                        logger.logError("unable to convert $message to event", requestTimerData)
-                                    }
-                                } catch (e: Throwable) {
-                                    logger.logError(e, requestTimerData)
+                val message = mapper.readValue<SlackMessageIn>(body, SlackMessageIn::class.java)
+                if (message.user_id != "USLACKBOT") {
+                    vertx.executeBlocking<Void>(
+                        {
+                            try {
+                                val event = SlackRequestConverter.toEvent(message, applicationId)
+                                if (event != null) {
+                                    controller.handle(event)
+                                } else {
+                                    logger.logError("unable to convert $message to event", requestTimerData)
                                 }
-                            },
-                            false, {}
-                        )
-                    }
+                            } catch (e: Throwable) {
+                                logger.logError(e, requestTimerData)
+                            }
+                        },
+                        false, {}
+                    )
+                }
+            } catch (e: Throwable) {
+                logger.logError(e, requestTimerData)
+            } finally {
+                try {
+                    requestTimer.end(requestTimerData)
+                    context.response().end()
                 } catch (e: Throwable) {
-                    logger.logError(e, requestTimerData)
-                } finally {
-                    try {
-                        requestTimer.end(requestTimerData)
-                        context.response().end()
-                    } catch (e: Throwable) {
-                        logger.error(e)
-                    }
+                    logger.error(e)
                 }
             }
         }
     }
+}
 
-    override fun send(event: Event, callback: ConnectorCallback, delayInMs: Long) {
-        logger.debug { "event: $event" }
-        if (event is Action) {
-            if (SlackProperties.useCurrentSlackApi) {
-                callback as SlackConnectorCallback
-                //TODO : manage eventAnswered like other connectors
-                val message = SlackMessageConverter.toMessageOut(event) as SlackMessageOut
-                val messageWithChannel = SlackMessageOut(message.text, callback.channelId, message.attachments)
-                postMessage(messageWithChannel, delayInMs)
-            } else {
-                val message = SlackMessageConverter.toMessageOut(event)
-                if (message != null) {
-                    sendMessage(message, delayInMs)
-                }
+override fun send(event: Event, callback: ConnectorCallback, delayInMs: Long) {
+    logger.debug { "event: $event" }
+    if (event is Action) {
+        if (SlackProperties.useCurrentSlackApi) {
+            callback as SlackConnectorCallback
+            //TODO : manage eventAnswered like other connectors
+            val message = SlackMessageConverter.toMessageOut(event) as SlackMessageOut
+            val messageWithChannel = SlackMessageOut(message.text, callback.channelId, message.attachments)
+            postMessage(messageWithChannel, delayInMs)
+        } else {
+            val message = SlackMessageConverter.toMessageOut(event)
+            if (message != null) {
+                sendMessage(message, delayInMs)
             }
         }
     }
-    /**
-     * Use webhooks slack message : https://api.slack.com/messaging/webhooks
-     */
-    private fun sendMessage(message: SlackConnectorMessage, delayInMs: Long) {
-        executor.executeBlocking(Duration.ofMillis(delayInMs)) {
-            client.sendMessage(outToken1, outToken2, outToken3, message)
-        }
-    }
+}
 
-    /**
-     * Use https://api.slack.com/methods/chat.postMessage
-     */
-    private fun postMessage(message: SlackConnectorMessage, delayInMs: Long) {
-        executor.executeBlocking(Duration.ofMillis(delayInMs)) {
-            client.postMessage("Bearer $authorization", message)
-        }
+/**
+ * Use webhooks slack message : https://api.slack.com/messaging/webhooks
+ */
+private fun sendMessage(message: SlackConnectorMessage, delayInMs: Long) {
+    executor.executeBlocking(Duration.ofMillis(delayInMs)) {
+        client.sendMessage(outToken1, outToken2, outToken3, message)
     }
+}
 
-    override fun addSuggestions(text: CharSequence, suggestions: List<CharSequence>): BotBus.() -> ConnectorMessage? = {
-        slackMessage(
-            text,
-            slackAttachment(null, suggestions.map { slackButton(it) })
-        )
+/**
+ * Use https://api.slack.com/methods/chat.postMessage
+ */
+private fun postMessage(message: SlackConnectorMessage, delayInMs: Long) {
+    executor.executeBlocking(Duration.ofMillis(delayInMs)) {
+        client.postMessage("Bearer $authorization", message)
     }
+}
 
-    override fun addSuggestions(
-        message: ConnectorMessage,
-        suggestions: List<CharSequence>
-    ): BotBus.() -> ConnectorMessage? = {
-        if (message is SlackMessageOut) {
-            val attachment = message.attachments.lastOrNull()
-            if (attachment == null) {
-                message.copy(attachments = listOf(slackAttachment(null, suggestions.map { slackButton(it) })))
-            } else if (attachment.actions.isEmpty()) {
-                message.copy(
-                    attachments =
-                    message.attachments.take(message.attachments.size - 1) + slackAttachment(
-                        null,
-                        suggestions.map { slackButton(it) })
-                )
-            } else {
-                null
-            }
+override fun addSuggestions(text: CharSequence, suggestions: List<CharSequence>): BotBus.() -> ConnectorMessage? = {
+    slackMessage(
+        text,
+        slackAttachment(null, suggestions.map { slackButton(it) })
+    )
+}
+
+override fun addSuggestions(
+    message: ConnectorMessage,
+    suggestions: List<CharSequence>
+): BotBus.() -> ConnectorMessage? = {
+    if (message is SlackMessageOut) {
+        val attachment = message.attachments.lastOrNull()
+        if (attachment == null) {
+            message.copy(attachments = listOf(slackAttachment(null, suggestions.map { slackButton(it) })))
+        } else if (attachment.actions.isEmpty()) {
+            message.copy(
+                attachments =
+                message.attachments.take(message.attachments.size - 1) + slackAttachment(
+                    null,
+                    suggestions.map { slackButton(it) })
+            )
         } else {
             null
         }
+    } else {
+        null
     }
+}
 
-    override fun toConnectorMessage(message: MediaMessage): BotBus.() -> List<ConnectorMessage> = {
-        if (message is MediaCard) {
-            val title = message.title
-            val subTitle = message.subTitle
-            listOfNotNull(
-                if (title != null && subTitle != null) {
-                    textMessage(title)
-                } else {
-                    null
-                },
-                slackMessage(
-                    subTitle ?: title ?: "",
-                    slackAttachment(null, message.actions.filter { it.url == null }.map { slackButton(it.title) })
-                )
+override fun toConnectorMessage(message: MediaMessage): BotBus.() -> List<ConnectorMessage> = {
+    //TODO check if event.subtype != "subtype": "message_changed", or        "subtype": "message_deleted",
+    if (message is MediaCard) {
+        val title = message.title
+        val subTitle = message.subTitle
+        listOfNotNull(
+            if (title != null && subTitle != null) {
+                textMessage(title)
+            } else {
+                null
+            },
+            slackMessage(
+                subTitle ?: title ?: "",
+                slackAttachment(null, message.actions.filter { it.url == null }.map { slackButton(it.title) })
             )
-        } else {
-            emptyList()
-        }
+        )
+    } else {
+        emptyList()
     }
+}
 }

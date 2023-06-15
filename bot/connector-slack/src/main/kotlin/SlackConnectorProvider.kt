@@ -13,10 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package ai.tock.bot.connector.slack
 
-import SlackProperties
 import ai.tock.bot.connector.Connector
 import ai.tock.bot.connector.ConnectorConfiguration
 import ai.tock.bot.connector.ConnectorMessage
@@ -27,6 +25,7 @@ import ai.tock.bot.connector.ConnectorTypeConfigurationField
 import ai.tock.bot.connector.slack.model.SlackMessageOut
 import ai.tock.shared.resourceAsString
 import kotlin.reflect.KClass
+
 
 internal object SlackConnectorProvider : ConnectorProvider {
 
@@ -63,28 +62,33 @@ internal object SlackConnectorProvider : ConnectorProvider {
      * @return a list of [ConnectorTypeConfigurationField]
      */
     private fun apiConfigurationFields(): List<ConnectorTypeConfigurationField> {
-        return listOf(
-            ConnectorTypeConfigurationField(
-                "Token 1",
-                OUT_TOKEN_1,
-                true
-            ),
-            ConnectorTypeConfigurationField(
-                "Token 2",
-                OUT_TOKEN_2,
-                true
-            ),
-            ConnectorTypeConfigurationField(
-                "Token 3",
-                OUT_TOKEN_3,
-                true
-            ),
-            ConnectorTypeConfigurationField(
-                "Token Authorization",
-                AUTHORIZATION,
-                SlackProperties.useCurrentSlackApi
-            ),
-        )
+        return if (!SlackProperties.useCurrentSlackApi) {
+            listOf(
+                ConnectorTypeConfigurationField(
+                    "Token 1",
+                    OUT_TOKEN_1,
+                    true
+                ),
+                ConnectorTypeConfigurationField(
+                    "Token 2",
+                    OUT_TOKEN_2,
+                    true
+                ),
+                ConnectorTypeConfigurationField(
+                    "Token 3",
+                    OUT_TOKEN_3,
+                    true
+                ),
+            )
+        } else {
+            listOf(
+                ConnectorTypeConfigurationField(
+                    "Token Authorization",
+                    AUTHORIZATION,
+                    true
+                )
+            )
+        }
     }
 
     override val supportedResponseConnectorMessageTypes: Set<KClass<out ConnectorMessage>> =
