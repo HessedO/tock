@@ -83,7 +83,6 @@ class SlackConnector(
                         }
                     }
                     logger.info { "message received from slack: $body" }
-
                     val message: EventApiMessage = mapper.readValue(body)
                     if (message is UrlVerificationEvent) {
                         context

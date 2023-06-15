@@ -19,6 +19,7 @@ package ai.tock.bot.connector.slack
 import ai.tock.bot.connector.slack.model.SlackConnectorMessage
 import ai.tock.shared.jackson.mapper
 import ai.tock.shared.retrofitBuilderWithTimeoutAndLogger
+import ai.tock.shared.tokenAuthenticationInterceptor
 import mu.KotlinLogging
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody
@@ -58,9 +59,9 @@ object SlackClient {
     private val customSlackApi: CustomSlackApi = retrofitBuilderWithTimeoutAndLogger(
         30000,
         logger,
-//        interceptors = listOf(
-//            tokenAuthenticationInterceptor(retrieveTokenOauth())
-//        ),
+        interceptors = listOf(
+            tokenAuthenticationInterceptor(retrieveTokenOauth())
+        ),
     )
         .baseUrl(SlackProperties.apiBaseUrl)
         .build()
@@ -78,7 +79,7 @@ object SlackClient {
 //                if (clientId != null) {
 //                    SlackOauthClient.slackOauth.authorize("chat:write", clientId).execute()
 //                        .body()?.accessToken
-                ""
+                SlackProperties.oauthToken
             } catch (e: Exception) {
                 throw Throwable("trouble retrieving slack token : ${e.message}")
             }

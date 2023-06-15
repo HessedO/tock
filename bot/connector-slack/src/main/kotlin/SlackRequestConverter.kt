@@ -34,7 +34,6 @@ import mu.KotlinLogging
 internal object SlackRequestConverter {
 
     private val logger = KotlinLogging.logger {}
-//    alias skipEvent : Event? = null
 
     fun toEvent(event: EventApiMessage, applicationId: String): Event? =
         if (event is InteractiveMessageEvent) {
@@ -50,12 +49,12 @@ internal object SlackRequestConverter {
             event.event.let { subMessage ->
                 if (subMessage.user == null) null
                 else if(subMessage is AppHomeOpenedEvent){
-                    logger.debug { "app opened" }
+                    logger.debug { "app opened from ${subMessage.user}" }
                     null
-//                    StartConversationEvent(PlayerId(subMessage.user,user,subMessage.channel))
                 }
                 else {
-                    if(subMessage is MessageEvent) {
+                    if(subMessage is MessageEvent && subMessage.botId == null) {
+                        //trigger the sentence sended only from the user
                         SendSentence(
                             PlayerId(subMessage.user),
                             applicationId,

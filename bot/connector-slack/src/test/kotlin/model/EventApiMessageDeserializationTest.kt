@@ -53,7 +53,7 @@ class EventApiMessageDeserializationTest {
             }"""
         val message: EventApiMessage = mapper.readValue(json)
         assertTrue { message is CallbackEvent }
-        assertEquals("Hello World", (message as CallbackEvent).event.text)
+        assertEquals("Hello World", ((message as CallbackEvent).event as MessageEvent).text)
     }
 
     @Test

@@ -66,8 +66,13 @@ data class AppHomeOpenedEvent(
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 data class MessageEvent(
+    /** to know if the bot answered or not**/
+    val ok : Boolean?,
     @JsonProperty("client_msg_id")
-    val clientMsgIds: String,
+    val clientMsgIds: String?,
+    /** message with botId means th message is from the bot**/
+    @JsonProperty("bot_id")
+    val botId : String?,
     override val channel: String,
     override val user: String,
     val ts: String,
