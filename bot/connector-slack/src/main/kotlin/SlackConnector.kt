@@ -242,6 +242,7 @@ class SlackConnector(
     }
 
     override fun toConnectorMessage(message: MediaMessage): BotBus.() -> List<ConnectorMessage> = {
+        //TODO check if event.subtype != "subtype": "message_changed", or        "subtype": "message_deleted",
         if (message is MediaCard) {
             val title = message.title
             val subTitle = message.subTitle
