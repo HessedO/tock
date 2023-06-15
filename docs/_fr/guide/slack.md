@@ -65,6 +65,13 @@ ou passer directement à [la suite](../api).
 
     * _Token 3_ : le dernier token de la _WebhookURL_, ou _authToken_
 
+> Si vous souhaitez utiliser votre bot dans une application slack privilégiez :  
+> Dans ce cas pour le lancement du BotApi et du BotAdmin rajoutez `tock_slack_use_current_slack_api=true` en propriété d'environnement  
+> l'url utilisée sera alors semblable à : https://api.slack.com/methods/chat.postMessage  
+ 
+* _App Home_ > _Show Tabs_ puis cocher la case "Allow users to send Slash commands and messages from the messages tab"
+* _Token Authorization_ : token Oauth de l'application pour utiliser le token spécifique qui permet de donner accès à l'api de slack autre wue par mode webhook.
+
 * Terminez avec _Update_
 
 > Attention : en cas de réinstallation de l'application Slack dans le _workspace_, URL et jetons sont changés
