@@ -203,7 +203,7 @@ private fun sendMessage(message: SlackConnectorMessage, delayInMs: Long) {
  */
 private fun postMessage(message: SlackConnectorMessage, delayInMs: Long) {
     executor.executeBlocking(Duration.ofMillis(delayInMs)) {
-        client.postMessage("Bearer $authorization", message)
+        client.postMessage("Bearer ${client.oauthToken}", message)
     }
 }
 

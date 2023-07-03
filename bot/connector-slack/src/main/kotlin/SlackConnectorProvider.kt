@@ -45,7 +45,7 @@ internal object SlackConnectorProvider : ConnectorProvider {
                 parameters.getValue(OUT_TOKEN_2),
                 parameters.getValue(OUT_TOKEN_3),
                 parameters.getValue(AUTHORIZATION),
-                SlackClient
+                SlackClient(parameters.getValue(AUTHORIZATION))
             )
         }
     }

@@ -20,6 +20,8 @@ import ai.tock.bot.connector.slack.model.SlackConnectorMessage
 import ai.tock.shared.jackson.mapper
 import ai.tock.shared.retrofitBuilderWithTimeoutAndLogger
 import ai.tock.shared.tokenAuthenticationInterceptor
+import api.SlackCurrentApi
+import api.SlackWebhookApi
 import mu.KotlinLogging
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody
@@ -29,34 +31,19 @@ import retrofit2.http.Header
 import retrofit2.http.POST
 import retrofit2.http.Path
 
-object SlackClient {
+class SlackClient(val oauthToken: String?) {
 
     private val logger = KotlinLogging.logger { }
 
-    interface SlackApi {
-        @POST("/services/{outToken1}/{outToken2}/{outToken3}")
-        fun sendMessage(
-            @Path("outToken1") outToken1: String,
-            @Path("outToken2") outToken2: String,
-            @Path("outToken3") outToken3: String,
-            @Body message: RequestBody
-        ): Call<Void>
-    }
-
-    interface CustomSlackApi {
-        @POST("/api/chat.postMessage")
-        fun postMessage(@Header("Authorization") authorization: String, @Body message: RequestBody): Call<Void>
-    }
-
-    private val slackApi: SlackApi = retrofitBuilderWithTimeoutAndLogger(
+    private val slackApi: SlackWebhookApi = retrofitBuilderWithTimeoutAndLogger(
         30000,
         logger
     )
         .baseUrl(SlackProperties.hooksBaseUrl)
         .build()
-        .create(SlackApi::class.java)
+        .create(SlackWebhookApi::class.java)
 
-    private val customSlackApi: CustomSlackApi = retrofitBuilderWithTimeoutAndLogger(
+    private val customSlackApi: SlackCurrentApi = retrofitBuilderWithTimeoutAndLogger(
         30000,
         logger,
         interceptors = listOf(
@@ -65,26 +52,29 @@ object SlackClient {
     )
         .baseUrl(SlackProperties.apiBaseUrl)
         .build()
-        .create(CustomSlackApi::class.java)
+        .create(SlackCurrentApi::class.java)
 
     /**
      * Retrieve token Oauth
-     * TODO : not finished
      */
     private fun retrieveTokenOauth(): String {
         // take a not null token between the two defined here
-        return listOfNotNull(
+        var token: String? = null
             try {
-                // TODO : finish token retrieve
-//                if (clientId != null) {
-//                    SlackOauthClient.slackOauth.authorize("chat:write", clientId).execute()
-//                        .body()?.accessToken
-                SlackProperties.oauthToken
+                token = oauthToken ?: SlackProperties.oauthToken ?: kotlin.run {
+                    logger.debug { "no oauthToken for slack api check configuration in studio or property tock_slack_oauth_token" }
+                    throw Throwable("check check connector configuration in studio $oauthToken configuration or property tock_slack_oauth_token") }
             } catch (e: Exception) {
                 throw Throwable("trouble retrieving slack token : ${e.message}")
             }
-        ).first()
+        return token
+    }
 
+    private fun generateOauthTokenFromSlackApi(){
+        NotImplementedError("not implemented yet")
+        //                if (clientId != null) {
+        //                    SlackOauthClient.slackOauth.authorize("chat:write", clientId).execute()
+        //                        .body()?.accessToken
     }
 
     /**
