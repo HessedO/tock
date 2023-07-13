@@ -24,6 +24,8 @@ import ai.tock.bot.connector.ConnectorType
 import ai.tock.bot.connector.ConnectorTypeConfiguration
 import ai.tock.bot.connector.ConnectorTypeConfigurationField
 import ai.tock.bot.connector.slack.model.SlackMessageOut
+import ai.tock.shared.booleanProperty
+import ai.tock.shared.property
 import ai.tock.shared.resourceAsString
 import kotlin.reflect.KClass
 
@@ -36,23 +38,51 @@ internal object SlackConnectorProvider : ConnectorProvider {
 
     override val connectorType: ConnectorType get() = slackConnectorType
 
+    val useCurrentSlackApi = booleanProperty("tock_slack_use_current_api", false)
+
     override fun connector(connectorConfiguration: ConnectorConfiguration): Connector {
         with(connectorConfiguration) {
-            return SlackConnector(
-                connectorId,
-                path,
-                parameters.getValue(OUT_TOKEN_1),
-                parameters.getValue(OUT_TOKEN_2),
-                parameters.getValue(OUT_TOKEN_3),
+            if (useCurrentSlackApi) {
+                return SlackConnector(
+                    connectorId,
+                    path,
                     parameters.getValue(AUTHORIZATION),
-                SlackClient
-            )
+                    SlackClient
+                )
+            } else {
+                return SlackConnector(
+                    connectorId,
+                    path,
+                    parameters.getValue(OUT_TOKEN_1),
+                    parameters.getValue(OUT_TOKEN_2),
+                    parameters.getValue(OUT_TOKEN_3),
+                    SlackClient
+                )
+            }
         }
     }
 
     override fun configuration(): ConnectorTypeConfiguration =
         ConnectorTypeConfiguration(
             slackConnectorType,
+            apiConfigurationFields(),
+            resourceAsString("/slack.svg")
+        )
+
+    /**
+     * Api configuration fields according to api
+     * @return a list of [ConnectorTypeConfigurationField]
+     */
+    private fun apiConfigurationFields(): List<ConnectorTypeConfigurationField> {
+        return if (useCurrentSlackApi) {
+            listOf(
+                ConnectorTypeConfigurationField(
+                    "Token Authorization",
+                    AUTHORIZATION,
+                    true
+                )
+            )
+        } else {
             listOf(
                 ConnectorTypeConfigurationField(
                     "Token 1",
@@ -69,16 +99,12 @@ internal object SlackConnectorProvider : ConnectorProvider {
                     OUT_TOKEN_3,
                     true
                 ),
-                    ConnectorTypeConfigurationField(
-                            "Authorization",
-                            AUTHORIZATION,
-                            true
-                    )
-            ),
-            resourceAsString("/slack.svg")
-        )
+            )
+        }
+    }
 
-    override val supportedResponseConnectorMessageTypes: Set<KClass<out ConnectorMessage>> = setOf(SlackMessageOut::class)
+    override val supportedResponseConnectorMessageTypes: Set<KClass<out ConnectorMessage>> =
+        setOf(SlackMessageOut::class)
 }
 
 internal class SlackConnectorProviderService : ConnectorProvider by SlackConnectorProvider

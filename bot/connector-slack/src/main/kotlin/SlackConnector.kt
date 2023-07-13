@@ -42,14 +42,30 @@ import java.net.URLDecoder
 import java.time.Duration
 
 class SlackConnector(
-        val applicationId: String,
-        val path: String,
-        val outToken1: String,
-        val outToken2: String,
-        val outToken3: String,
-        val authorization: String,
-        val client: SlackClient
+    val applicationId: String,
+    val path: String,
+    val outToken1: String,
+    val outToken2: String,
+    val outToken3: String,
+    val authorization: String,
+    val client: SlackClient
 ) : ConnectorBase(SlackConnectorProvider.connectorType) {
+
+    constructor(applicationId: String, path: String, authorization: String, client: SlackClient) : this(
+        applicationId,
+        path,
+        "",
+        "",
+        "",
+        authorization,
+        client
+    )
+
+    constructor(
+        applicationId: String, path: String, outToken1: String,
+        outToken2: String,
+        outToken3: String, client: SlackClient
+    ) : this(applicationId, path, outToken1, outToken2, outToken3, "", client)
 
     companion object {
         private val logger = KotlinLogging.logger {}
@@ -72,7 +88,7 @@ class SlackConnector(
             router.post(path).handler { context ->
                 val requestTimerData = requestTimer.start("slack_webhook")
                 try {
-                    val body = context.bodyAsString.let {
+                    val body = context.body().asString().let {
                         if (it.startsWith("payload=")) {
                             URLDecoder.decode(it.substring("payload=".length), "UTF-8")
                         } else {
