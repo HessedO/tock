@@ -21,10 +21,7 @@ import ai.tock.bot.connector.ConnectorCallback
 import ai.tock.bot.connector.ConnectorMessage
 import ai.tock.bot.connector.media.MediaCard
 import ai.tock.bot.connector.media.MediaMessage
-import ai.tock.bot.connector.slack.model.EventApiMessage
-import ai.tock.bot.connector.slack.model.SlackConnectorMessage
-import ai.tock.bot.connector.slack.model.SlackMessageOut
-import ai.tock.bot.connector.slack.model.UrlVerificationEvent
+import ai.tock.bot.connector.slack.model.*
 import ai.tock.bot.connector.slack.model.old.SlackMessageIn
 import ai.tock.bot.engine.BotBus
 import ai.tock.bot.engine.BotRepository.requestTimer
@@ -50,8 +47,25 @@ class SlackConnector(
     val outToken1: String,
     val outToken2: String,
     val outToken3: String,
+    val authorization: String,
     val client: SlackClient
 ) : ConnectorBase(SlackConnectorProvider.connectorType) {
+
+    constructor(applicationId: String, path: String, authorization: String, client: SlackClient) : this(
+        applicationId,
+        path,
+        "",
+        "",
+        "",
+        authorization,
+        client
+    )
+
+    constructor(
+        applicationId: String, path: String, outToken1: String,
+        outToken2: String,
+        outToken3: String, client: SlackClient
+    ) : this(applicationId, path, outToken1, outToken2, outToken3, "", client)
 
     companion object {
         private val logger = KotlinLogging.logger {}
@@ -59,6 +73,7 @@ class SlackConnector(
     }
 
     private val executor: Executor by injector.instance()
+
 
     override fun register(controller: ConnectorController) {
         if (OLD_SLACK_API) {
@@ -82,24 +97,28 @@ class SlackConnector(
                     }
                     logger.info { "message received from slack: $body" }
 
-                    val message: EventApiMessage = mapper.readValue(body)
-                    if (message is UrlVerificationEvent) {
-                        context
-                            .response()
-                            .putHeader("Content-type", "text/plain")
-                            .end(message.challenge)
-                    } else {
-                        // answer to slack immediately
-                        context.response().end()
-                        val event = SlackRequestConverter.toEvent(message, applicationId)
-                        if (event != null) {
-                            executor.executeBlocking {
-                                controller.handle(event)
-                            }
+                    if(!body.contains("bot_id")){
+                        val message: EventApiMessage = mapper.readValue(body)
+                        if (message is UrlVerificationEvent) {
+                            context
+                                    .response()
+                                    .putHeader("Content-type", "text/plain")
+                                    .end(message.challenge)
                         } else {
-                            logger.debug { "skip message: $body" }
+                            // answer to slack immediately
+                            context.response().end()
+                            val event = SlackRequestConverter.toEvent(message, applicationId)
+                            if (event != null) {
+                                executor.executeBlocking {
+                                    controller.handle(event)
+                                }
+                            } else {
+                                logger.debug { "skip message: $body" }
+                            }
                         }
                     }
+
+
                 } catch (e: Throwable) {
                     logger.logError(e, requestTimerData)
                     try {
@@ -129,19 +148,19 @@ class SlackConnector(
                     val message = mapper.readValue<SlackMessageIn>(body, SlackMessageIn::class.java)
                     if (message.user_id != "USLACKBOT") {
                         vertx.executeBlocking<Void>(
-                            {
-                                try {
-                                    val event = SlackRequestConverter.toEvent(message, applicationId)
-                                    if (event != null) {
-                                        controller.handle(event)
-                                    } else {
-                                        logger.logError("unable to convert $message to event", requestTimerData)
+                                {
+                                    try {
+                                        val event = SlackRequestConverter.toEvent(message, applicationId)
+                                        if (event != null) {
+                                            controller.handle(event)
+                                        } else {
+                                            logger.logError("unable to convert $message to event", requestTimerData)
+                                        }
+                                    } catch (e: Throwable) {
+                                        logger.logError(e, requestTimerData)
                                     }
-                                } catch (e: Throwable) {
-                                    logger.logError(e, requestTimerData)
-                                }
-                            },
-                            false, {}
+                                },
+                                false, {}
                         )
                     }
                 } catch (e: Throwable) {
@@ -161,9 +180,14 @@ class SlackConnector(
     override fun send(event: Event, callback: ConnectorCallback, delayInMs: Long) {
         logger.debug { "event: $event" }
         if (event is Action) {
-            val message = SlackMessageConverter.toMessageOut(event)
+            val tmp = event.applicationId
+            event.applicationId = tmp.split("|",limit = 2).first()
+            var message = SlackMessageConverter.toMessageOut(event)
+            message = message as SlackMessageOut
+            message.channel = tmp.split("|",limit = 2).last()
             if (message != null) {
-                sendMessage(message, delayInMs)
+                //sendMessage(message, delayInMs)
+                postMessage(message,delayInMs)
             }
         }
     }
@@ -174,10 +198,17 @@ class SlackConnector(
         }
     }
 
+
+    private fun postMessage(message: SlackConnectorMessage, delayInMs: Long) {
+        executor.executeBlocking(Duration.ofMillis(delayInMs)) {
+            client.postMessage("Bearer $authorization", message)
+        }
+    }
+
     override fun addSuggestions(text: CharSequence, suggestions: List<CharSequence>): BotBus.() -> ConnectorMessage? = {
         slackMessage(
-            text,
-            slackAttachment(null, suggestions.map { slackButton(it) })
+                text,
+                slackAttachment(null, suggestions.map { slackButton(it) })
         )
     }
 
@@ -188,8 +219,8 @@ class SlackConnector(
                 message.copy(attachments = listOf(slackAttachment(null, suggestions.map { slackButton(it) })))
             } else if (attachment.actions.isEmpty()) {
                 message.copy(
-                    attachments =
-                    message.attachments.take(message.attachments.size - 1) + slackAttachment(null, suggestions.map { slackButton(it) })
+                        attachments =
+                        message.attachments.take(message.attachments.size - 1) + slackAttachment(null, suggestions.map { slackButton(it) })
                 )
             } else {
                 null
@@ -204,15 +235,15 @@ class SlackConnector(
             val title = message.title
             val subTitle = message.subTitle
             listOfNotNull(
-                if (title != null && subTitle != null) {
-                    textMessage(title)
-                } else {
-                    null
-                },
-                slackMessage(
-                    subTitle ?: title ?: "",
-                    slackAttachment(null, message.actions.filter { it.url == null }.map { slackButton(it.title) })
-                )
+                    if (title != null && subTitle != null) {
+                        textMessage(title)
+                    } else {
+                        null
+                    },
+                    slackMessage(
+                            subTitle ?: title ?: "",
+                            slackAttachment(null, message.actions.filter { it.url == null }.map { slackButton(it.title) })
+                    )
             )
         } else {
             emptyList()

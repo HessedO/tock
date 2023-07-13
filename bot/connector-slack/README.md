@@ -11,7 +11,6 @@ You will be given a slack url "Webhook URL". This URL will look like this:
 
 https://hooks.slack.com/services/slackToken1/slackToken2/slackToken3
 
-
 slackToken1 is your Slack Workspace id.
 slackToken2 is your Slack Webhook id.
 slackToken3 is the authentication token, and the only token that can be regenerated.
