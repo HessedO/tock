@@ -16,6 +16,7 @@
 
 package ai.tock.bot.connector.slack
 
+import SlackProperties
 import ai.tock.bot.connector.Connector
 import ai.tock.bot.connector.ConnectorConfiguration
 import ai.tock.bot.connector.ConnectorMessage
@@ -23,10 +24,7 @@ import ai.tock.bot.connector.ConnectorProvider
 import ai.tock.bot.connector.ConnectorType
 import ai.tock.bot.connector.ConnectorTypeConfiguration
 import ai.tock.bot.connector.ConnectorTypeConfigurationField
-import ai.tock.bot.connector.slack.SlackClient
-import ai.tock.bot.connector.slack.SlackConnector
 import ai.tock.bot.connector.slack.model.SlackMessageOut
-import ai.tock.bot.connector.slack.slackConnectorType
 import ai.tock.shared.resourceAsString
 import kotlin.reflect.KClass
 
@@ -42,15 +40,23 @@ internal object SlackConnectorProvider : ConnectorProvider {
 
     override fun connector(connectorConfiguration: ConnectorConfiguration): Connector {
         with(connectorConfiguration) {
-            return SlackConnector(
-                connectorId,
-                path,
-                parameters.getValue(OUT_TOKEN_1),
-                parameters.getValue(OUT_TOKEN_2),
-                parameters.getValue(OUT_TOKEN_3),
-                parameters.getValue(AUTHORIZATION),
-                SlackClient
-            )
+            if(SlackProperties.useCurrentSlackApi){
+                return SlackConnector(
+                    connectorId,
+                    path,
+                    parameters.getValue(AUTHORIZATION),
+                    SlackClient
+                )
+            } else{
+                return SlackConnector(
+                    connectorId,
+                    path,
+                    parameters.getValue(OUT_TOKEN_1),
+                    parameters.getValue(OUT_TOKEN_2),
+                    parameters.getValue(OUT_TOKEN_3),
+                    SlackClient
+                )
+            }
         }
     }
 

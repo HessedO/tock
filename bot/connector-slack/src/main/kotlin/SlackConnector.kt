@@ -54,6 +54,22 @@ class SlackConnector(
     val client: SlackClient
 ) : ConnectorBase(SlackConnectorProvider.connectorType) {
 
+    constructor(applicationId: String, path: String, authorization: String, client: SlackClient) : this(
+        applicationId,
+        path,
+        "",
+        "",
+        "",
+        authorization,
+        client
+    )
+
+    constructor(
+        applicationId: String, path: String, outToken1: String,
+        outToken2: String,
+        outToken3: String, client: SlackClient
+    ) : this(applicationId, path, outToken1, outToken2, outToken3, "", client)
+
     companion object {
         private val logger = KotlinLogging.logger {}
         private val OLD_SLACK_API = booleanProperty("tock_slack_old_api_style", false)
@@ -193,6 +209,7 @@ class SlackConnector(
             }
         }
     }
+
     /**
      * Use webhooks slack message : https://api.slack.com/messaging/webhooks
      */
